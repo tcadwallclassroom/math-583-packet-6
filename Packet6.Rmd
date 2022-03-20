@@ -1,0 +1,142 @@
+---
+title: "Packet 6 - Confidence Intervals"
+knit: (function(input_file, encoding) {
+  out_dir <- 'docs';
+  rmarkdown::render(input_file,
+  encoding=encoding,
+  output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
+author: "Todd CadwalladerOlsker"
+date: "*Last updated:* `r Sys.Date()`"
+output:
+  rmdformats::downcute:
+    downcute_theme: "chaos"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(rmdformats)
+library(openintro)
+library(tidyverse)
+library(gghighlight)
+library(formatR)
+knitr::opts_chunk$set(echo = T, cache = T, eval = T, cache.lazy = F, warning = F)
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=F)
+options(scipen = 999)
+```
+
+## Introducing confidence intervals
+
+Whenever we derive a sample statistic, that statistic is only an *estimate* of the population parameter. The value of the parameter might be slightly higher or slightly lower than that of the statistic. A *confidence interval* gives us a range of values where we beleive the true parameter value is likely to be, with a certain "level of confidence". 
+
+## Confidence Interval for a Single Proportion
+
+For the next example, install and load the `infer` package, and examine the `gss` data set. We want to examine to proportion of respondents who have a college degree:
+
+```{r infer}
+### install.packages("infer")
+library(infer) 
+help("gss")
+glimpse(gss)
+table_college <- table(gss$college)
+props_college <- table_college %>% prop.table
+props
+```
+
+We can see that our *point estimate* based on this sample of 500 people is that 34.8% of the population has a college degree. But how good is this estimate? This is where a confidence interval comes in. 
+
+With a "large enough" sample size (meaning that the success-failure conditions have been met), the distribution of the sample proportion is approximately normal, and the standard error can be calulated:
+
+\[SE = \sqrt{\frac{\hat{p}(1-\hat{p})}{n}}\]
+
+In this example, the success-failure conditions have, in fact, been met, so we calculate
+
+```{r gssse}
+p_hat <- 0.348
+n <- 500
+se <- sqrt(p_hat * (1 - p_hat) / n)
+```
+
+For a 95% confidence interval, we wish to find the "middle 95%" of the normal curve:
+
+```{ r gss normTail}
+qnorm(c(0.025,0.975),0,1)
+normTail(0, 1, M = qnorm(c(0.025,0.975),0,1), 
+        col = "forestgreen", xLab = "symbol")
+
+qnorm(c(0.025,0.975),p_hat,se)
+normTail(p_hat, se, M = qnorm(c(0.025,0.975),p_hat,se),
+        col = "forestgreen")
+        
+```
+
+What does "95%" mean in this context? We are "95% confident", but 95% of *what*?
+
+Here's a nice simulation that can answer that question for us: Suppose the true proportion is 38%. If we took many samples of 500 people, what kind of confidence intervals would we get?
+
+```{r conf int sim, eval = F}
+p <- 0.38
+n <- 500
+simulations = 10000
+popsize <- 259000000
+outcomes <- c(rep("degree", p*popsize), 
+              rep("no degree", (1-p)*popsize))
+
+p_hat <- numeric(simulations)
+se <- numeric(simulations)
+lower_bound <- numeric(simulations)
+upper_bound <- numeric(simulations)
+
+for(i in 1:simulations){
+  sample <- sample(outcomes, n)
+  p_hat[i] <-  sum(sample == "degree")/n
+  se[i] <- sqrt(p_hat[i] * (1 - p_hat[i]) / n)
+  lower_bound[i] <- p_hat[i] - 1.96 * se[i]
+  upper_bound[i] <- p_hat[i] + 1.96 * se[i]
+}
+
+conf_intervals <- data.frame(p_hat, 
+                             se, 
+                             lower_bound, 
+                             upper_bound)
+conf_intervals <- conf_intervals %>% 
+  mutate(has_p = (p > lower_bound & p < upper_bound))
+
+sum(conf_intervals$has_p == TRUE)/simulations
+
+```
+
+What does this simulation tell up about the meaning of the 95% confidence interval?
+
+## The Bootstrap
+
+The *bootstrap* is a way of approximating the variation in our point estimation using our sample. The idea is this: we had 174 respondents with a college degree out of 500 total, for an estimated proportion of 0.348. If this estimate is accurate, we can think of 500 marbles in a bag, where 174 of them are red. The variation can be simulated by pulling out 500 marbles *with replacement* many times -- in essence, giving us many simulated sample point estimates. We can then get a confidence interval by looking at the "middle 95%" of our trials.
+
+```{r bootstrap}
+n <- 500
+simulations <- 100000
+data <- gss$college
+p_hat <- numeric(simulations)
+
+for(i in 1:simulations){
+  sample <- sample(data, n, replace = T)
+  p_hat[i] <-  sum(sample == "degree")/n
+}
+
+results <- data.frame(p_hat)
+
+quantile(results$p_hat, probs = c(0.025, 0.975))
+
+results %>% ggplot(aes(x = p_hat)) +
+  geom_bar(width = 1/n,  
+              color = "black", 
+              fill = "forestgreen") +
+  gghighlight(quantile(results$p_hat, 0.975) >= p_hat &
+              quantile(results$p_hat, 0.025) <= p_hat,
+              unhighlighted_params = list(
+                color = "grey",
+                fill = "forestgreen", 
+                alpha = 0.25))
+
+```
+
