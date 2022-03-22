@@ -31,56 +31,93 @@ Whenever we derive a sample statistic, that statistic is only an *estimate* of t
 
 ## Confidence Interval for a Single Proportion
 
-For the next example, install and load the `infer` package, and examine the `gss` data set. We want to examine to proportion of respondents who have a college degree:
 
-```{r infer}
-### install.packages("infer")
-library(infer) 
-help("gss")
-glimpse(gss)
-table_college <- table(gss$college)
-props_college <- table_college %>% prop.table
-props
+
+For the next several examples, we are going to make use of the [General Social Survey](http://gss.norc.org/) data. In order to make this easier on us, we are going to install the `gssr` package; unfortunately, this is a bit more involved than most packages. Run the following in RStudio:
+
+```{r gssr}
+#The following only needs to be run once:
+
+#install.packages("drat")
+#library(drat)
+#drat::addRepo("kjhealy")
+#install.packages("gssr")
+library(gssr)
 ```
 
-We can see that our *point estimate* based on this sample of 500 people is that 34.8% of the population has a college degree. But how good is this estimate? This is where a confidence interval comes in. 
+You can see some examples using the `gssr` package at the [Overview of the `gssr` package.](https://kjhealy.github.io/gssr/articles/overview.html) First, we'll recreate the data from 2010 that we saw in the `openintro` package:
 
-With a "large enough" sample size (meaning that the success-failure conditions have been met), the distribution of the sample proportion is approximately normal, and the standard error can be calulated:
+```{r gssr openintro}
+data(gss_doc)
+#View(gss_doc) for information on all the variables.
+#data(gss_all) will load the entire (gigantic) data set.
+
+num_vars <- c("hrsrelax", "mntlhlth", "hrs1")
+cat_vars <- c("degree", "grass")
+my_vars <- c(num_vars, cat_vars)
+
+gss10 <- gss_get_yr(2010)
+gss10 <- gss10 %>% 
+  select(all_of(my_vars)) %>% 
+  mutate(
+    # Convert all missing to NA
+    across(everything(), haven::zap_missing),
+    # Make all categorical variables factors and relabel nicely
+    across(all_of(cat_vars), forcats::as_factor)
+    )
+```
+
+Now, we can view the data on the `grass` variable just like we did in the previous packet:
+
+```{r tables}
+grass10_table <- table(gss10$grass)
+grass10_table
+grass10_props <- grass10_table %>% prop.table()
+grass10_props
+```
+
+We can see that our *point estimate* based on this sample of 1259 people is that 47.9% of the population (in 2010) supported making marijuana legal. 
+
+The nice this about the `gssr` package is that we can easily choose whatever years and variables we want. For example, before continuing, find a point estimate for the percentage of Americans that supported legalizing marijuana in 2018 (the most recent year in which this question was asked).
+
+Now, the question is: how good is this estimate? This is where a confidence interval comes in. 
+
+With a "large enough" sample size (meaning that the success-failure conditions have been met), the distribution of the sample proportion is approximately normal, and the standard error can be calculated:
 
 \[SE = \sqrt{\frac{\hat{p}(1-\hat{p})}{n}}\]
 
 In this example, the success-failure conditions have, in fact, been met, so we calculate
 
-```{r gssse}
-p_hat <- 0.348
-n <- 500
+```{r gss se}
+p_hat <- grass10_props["legal"]
+n <- grass10_table["legal"] + grass10_table["not legal"]
 se <- sqrt(p_hat * (1 - p_hat) / n)
 ```
 
 For a 95% confidence interval, we wish to find the "middle 95%" of the normal curve:
 
-```{ r gss normTail}
+```{r gss normTail}
 qnorm(c(0.025,0.975),0,1)
 normTail(0, 1, M = qnorm(c(0.025,0.975),0,1), 
         col = "forestgreen", xLab = "symbol")
 
+c(lower = p_hat - 1.96 * se, upper = p_hat + 1.96 * se)
+
 qnorm(c(0.025,0.975),p_hat,se)
 normTail(p_hat, se, M = qnorm(c(0.025,0.975),p_hat,se),
         col = "forestgreen")
-        
 ```
 
 What does "95%" mean in this context? We are "95% confident", but 95% of *what*?
 
-Here's a nice simulation that can answer that question for us: Suppose the true proportion is 38%. If we took many samples of 500 people, what kind of confidence intervals would we get?
+Here's a nice simulation that can answer that question for us: Suppose the true proportion of support for legalizing marijuana in 2018 is 65%. If we took many samples of 1447 people, what kind of confidence intervals would we get?
 
 ```{r conf int sim, eval = F}
-p <- 0.38
-n <- 500
-simulations = 10000
-popsize <- 259000000
-outcomes <- c(rep("degree", p*popsize), 
-              rep("no degree", (1-p)*popsize))
+p <- 0.65
+n <- 1447
+simulations <- 10000
+success <- "legal"
+responses <- c("legal", "not legal")
 
 p_hat <- numeric(simulations)
 se <- numeric(simulations)
@@ -88,8 +125,8 @@ lower_bound <- numeric(simulations)
 upper_bound <- numeric(simulations)
 
 for(i in 1:simulations){
-  sample <- sample(outcomes, n)
-  p_hat[i] <-  sum(sample == "degree")/n
+  sample <- sample(responses, size = n, prob = c(p,(1-p)), replace = T)
+  p_hat[i] <-  sum(sample == success)/n
   se[i] <- sqrt(p_hat[i] * (1 - p_hat[i]) / n)
   lower_bound[i] <- p_hat[i] - 1.96 * se[i]
   upper_bound[i] <- p_hat[i] + 1.96 * se[i]
@@ -106,37 +143,87 @@ sum(conf_intervals$has_p == TRUE)/simulations
 
 ```
 
-What does this simulation tell up about the meaning of the 95% confidence interval?
+What does this simulation tell us about the meaning of the 95% confidence interval?
+
+## Margin of Error
+
+Another example: A recent poll (conducted March 4-6, 2022) by Quinnipiac University surveyed 1,374 American adults, and reported that 71% of American adults would support a ban on Russian oil even if it meant higher gas prices [See press release here.](https://poll.qu.edu/poll-release?releaseid=3838). The fine print says that the poll has a margin of error of $\pm 2.6$ percentage points. 
+
+a. Find the standard error of this poll, based on the normal distribution, and use it to calculate a 95% confidence interval. 
+b. Does your calculation match the $\pm 2.6$ "margin of error" stated by Quinnipiac? What might be the difference between your calculation and that of Quinnipiac?
 
 ## The Bootstrap
 
-The *bootstrap* is a way of approximating the variation in our point estimation using our sample. The idea is this: we had 174 respondents with a college degree out of 500 total, for an estimated proportion of 0.348. If this estimate is accurate, we can think of 500 marbles in a bag, where 174 of them are red. The variation can be simulated by pulling out 500 marbles *with replacement* many times -- in essence, giving us many simulated sample point estimates. We can then get a confidence interval by looking at the "middle 95%" of our trials.
+The *bootstrap* is a way of approximating the variation in our point estimation using our sample. The idea is this: In the 2010 GSS, we had 603 respondents who supported legalizing marijuana out of 1259 total, for an estimated proportion of 0.479. If this estimate is accurate, we can think of 1259 marbles in a bag, where 603 of them are red. The variation can be simulated by pulling out 1259 marbles *with replacement* many times -- in essence, giving us many simulated sample point estimates. We can then get a confidence interval by looking at the "middle 95%" of our trials.
 
 ```{r bootstrap}
-n <- 500
+n <- grass10_table["legal"] + grass10_table["not legal"]
 simulations <- 100000
-data <- gss$college
+data <- (gss10 %>% drop_na(grass))$grass
+success <- "legal"
 p_hat <- numeric(simulations)
 
 for(i in 1:simulations){
   sample <- sample(data, n, replace = T)
-  p_hat[i] <-  sum(sample == "degree")/n
+  p_hat[i] <-  sum(sample == success)/n
 }
 
 results <- data.frame(p_hat)
 
 quantile(results$p_hat, probs = c(0.025, 0.975))
+lower_bound <- quantile(results$p_hat, probs = c(0.025, 0.975))["2.5%"]
+upper_bound <- quantile(results$p_hat, probs = c(0.025, 0.975))["97.5%"]
 
 results %>% ggplot(aes(x = p_hat)) +
   geom_bar(width = 1/n,  
-              color = "black", 
-              fill = "forestgreen") +
+           color = "black", 
+           fill = "forestgreen") +
   gghighlight(quantile(results$p_hat, 0.975) >= p_hat &
               quantile(results$p_hat, 0.025) <= p_hat,
               unhighlighted_params = list(
                 color = "grey",
                 fill = "forestgreen", 
-                alpha = 0.25))
+                alpha = 0.25)) +
+  labs(
+    title = paste(simulations, "bootstrap simulations of the population that supported legalization of marijuana"),
+    subtitle = "Based on 2010 GSS data",
+    x = "Sample Proportion",
+    y = "Number of Simulations"
+  ) +
+  scale_x_continuous(breaks = seq(0.44, 0.56, 0.02))
 
 ```
 
+We can see that 95% of our data lies between `r lower_bound` and `r upper_bound`, making this a good 95% confidence interval for the proportion that favored legalizing marijuana in 2010. 
+
+## To Turn In
+
+Our next topic will be to compare two proportions from different populations. For example, we might compare the level of support for legalizing marijuana for those with a college degree to those without in 2018.
+
+1. Using the `gss18` dataset, collapse the `degree` variable into a binary "degree/no degree" variable that we will call `college` using the following code:
+
+```{r to turn in 1, eval = FALSE}
+gss18 <- gss18 %>% 
+  mutate(
+    college = recode(degree,
+                   "lt high school" = "no degree",
+                   "high school" = "no degree",
+                   "junior college" = "degree",
+                   "bachelor" = "degree",
+                   "graduate" = "degree"
+    )
+  )
+```
+
+2. Run the following commands:
+
+`table(gss18$college, gss18$grass) %>% addmargins()`
+`table(gss18$college, gss18$grass) %>% prop.table(margin = 1)`
+
+Using an eyeball estimate, does it appear that there is a difference in the level of support for each group?
+
+2. Create a 95% confidence interval using the standard error method for the proportion of each group who support legalization of marijuana. (You may wish to use `filter` to analyze each group separately.)
+
+3. Create a 95% confidence interval using the bootstrap method (10000 simuations) for the proportion of each group who support legalization of marijuana.
+
+4. Do these confidence intervals overlap? If so, or if not, what does that mean?
