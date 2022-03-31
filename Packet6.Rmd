@@ -196,6 +196,21 @@ results %>% ggplot(aes(x = p_hat)) +
 
 We can see that 95% of our data lies between `r lower_bound` and `r upper_bound`, making this a good 95% confidence interval for the proportion that favored legalizing marijuana in 2010. 
 
+## Math 120 Monkey Investigation
+
+In Math 120, students are given of an experiment: Two potatoes, one cooked and one raw, are placed in front of a monkey, and the money is allowed to choose one. The experiment is repeated 12 times, with the following results:
+
+|Cooked|Raw|
+|---|---|
+|9|3|
+
+The question is whether or not the monkey prefers one potato over the other. Students are asked to determine whether or not this data suggests that the monkey exhibits a preference for cooked potatoes, or if it is likely that the monkey is just choosing its potato randomly.
+
+1. Conduct a simulation-based hypothesis test using the null hypothesis that $p=0.5$ (that is, the null hypothesis is that the monkey is choosing randomly), and alternative hypothesis $p \ne 0.5$ (that is, a two-tailed hypothesis test). What p-value do you get?
+2. Find a confidence interval for the proportion of cooked potatoes that the monkey chooses using the bootstrap method. 
+
+I've posted the Math 120 worksheets (courtesy of Dr. Wynne) on our Canvas page, you can see the full investigation (including the "six-step process" used in Math 120) there.
+
 ## To Turn In
 
 Our next topic will be to compare two proportions from different populations. For example, we might compare the level of support for legalizing marijuana for those with a college degree to those without in 2018.
@@ -224,6 +239,6 @@ Using an eyeball estimate, does it appear that there is a difference in the leve
 
 2. Create a 95% confidence interval using the standard error method for the proportion of each group who support legalization of marijuana. (You may wish to use `filter` to analyze each group separately.)
 
-3. Create a 95% confidence interval using the bootstrap method (10000 simuations) for the proportion of each group who support legalization of marijuana.
+3. Create a 95% confidence interval using the bootstrap method (10000 simulations) for the proportion of each group who support legalization of marijuana.
 
 4. Do these confidence intervals overlap? If so, or if not, what does that mean?
