@@ -314,7 +314,7 @@ results %&gt;% ggplot(aes(x = p_hat)) +
 </table>
 <p>The question is whether or not the monkey prefers one potato over the other. Students are asked to determine whether or not this data suggests that the monkey exhibits a preference for cooked potatoes, or if it is likely that the monkey is just choosing its potato randomly.</p>
 <ol style="list-style-type: decimal">
-<li>Conduct a simulation-based hypothesis test using the null hypothesis that <span class="math inline">\(p=0.5\)</span> (that is, the null hypothesis is that the monkey is choosing randomly), and alternative hypothesis <span class="math inline">\(p \ne 0.5\)</span> (that is, a two-tailed hypothesis test). What p-value do you get?</li>
+<li>Conduct a randomization-based hypothesis test using the null hypothesis that <span class="math inline">\(p=0.5\)</span> (that is, the null hypothesis is that the monkey is choosing randomly), and alternative hypothesis <span class="math inline">\(p \ne 0.5\)</span> (that is, a two-tailed hypothesis test). What p-value do you get?</li>
 <li>Find a confidence interval for the proportion of cooked potatoes that the monkey chooses using the bootstrap method.</li>
 </ol>
 <p>I’ve posted the Math 120 worksheets (courtesy of Dr. Wynne) on our Canvas page, you can see the full investigation (including the “six-step process” used in Math 120) there.</p>
@@ -344,6 +344,7 @@ results %&gt;% ggplot(aes(x = p_hat)) +
 <li><p>Create a 95% confidence interval using the standard error method for the proportion of each group who support legalization of marijuana. (You may wish to use <code>filter</code> to analyze each group separately.)</p></li>
 <li><p>Create a 95% confidence interval using the bootstrap method (10000 simulations) for the proportion of each group who support legalization of marijuana.</p></li>
 <li><p>Do these confidence intervals overlap? If so, or if not, what does that mean?</p></li>
+<li><p>Now, re-do parts 2 and 3 to create a 99% confidence interval in each case. If 1.96 was the number of standard deviations (in each direction) needed for a 95% confidence interval, what is the number of standard deviations we need (again, in each direction) for a 99% interval?</p></li>
 </ol>
 </div>
 </div>
