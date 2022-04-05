@@ -30,8 +30,8 @@ num_vars <- c("hrsrelax", "mntlhlth", "hrs1")
 cat_vars <- c("degree", "grass")
 my_vars <- c(num_vars, cat_vars)
 
-gss18 <- gss_get_yr(2018)
-gss18 <- gss18 %>% 
+gss10 <- gss_get_yr(2010)
+gss10 <- gss10 %>% 
   select(all_of(my_vars)) %>% 
   mutate(
     # Convert all missing to NA
@@ -112,3 +112,66 @@ my_gss18 <- my_gss18 %>%
 
 table(my_gss18$college, my_gss18$grass) %>% addmargins()
 table(my_gss18$college, my_gss18$grass) %>% prop.table(margin = 1)
+
+# infer package
+
+library(infer)
+
+p_hat <- gss10 %>%
+  specify(response = grass, success = "legal") %>%
+  calculate(stat = "prop")
+
+p_hat <- gss10 %>%
+  observe(response = grass, success = "legal", stat = "prop")
+
+null_dist <- gss10 %>%
+  specify(response = grass, success = "legal") %>%
+  hypothesize(null = "point", p = .5) %>%
+  generate(reps = 1000, type = "draw") %>%
+  calculate(stat = "prop")
+
+null_dist %>% 
+  visualize() +
+  shade_p_value(obs_stat = p_hat, direction = "less")
+
+null_dist %>%
+  get_p_value(obs_stat = p_hat, direction = "less")
+
+## 2 prop test
+
+d_hat <- gss %>% 
+  specify(college ~ sex, success = "no degree") %>%
+  calculate(stat = "diff in props", order = c("female", "male"))
+
+# Alternatively, using the observe() wrapper to calculate the observed statistic,
+
+d_hat <- gss %>% 
+  observe(college ~ sex, success = "no degree", 
+          stat = "diff in props", order = c("female", "male"))
+
+# Then, generating the null distribution,
+
+null_dist <- gss %>%
+  specify(college ~ sex, success = "no degree") %>%
+  hypothesize(null = "independence") %>% 
+  generate(reps = 1000, type = "permute") %>% 
+  calculate(stat = "diff in props", order = c("female", "male"))
+
+
+## infer package bootstrap
+
+boot_dist <- gss10 %>%
+  specify(response = grass, success = "legal") %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "prop")
+
+
+# Use the bootstrap distribution to find a confidence interval,
+
+percentile_ci <- get_ci(boot_dist)
+
+# Visualizing the observed statistic alongside the distribution,
+
+boot_dist %>% 
+  visualize() +
+  shade_confidence_interval(endpoints = percentile_ci)
