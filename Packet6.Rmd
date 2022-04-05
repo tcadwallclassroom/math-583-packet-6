@@ -158,7 +158,7 @@ The *bootstrap* is a way of approximating the variation in our point estimation 
 
 ```{r bootstrap}
 n <- grass10_table["legal"] + grass10_table["not legal"]
-simulations <- 100000
+simulations <- 10000
 data <- (gss10 %>% drop_na(grass))$grass
 success <- "legal"
 p_hat <- numeric(simulations)
@@ -195,6 +195,81 @@ results %>% ggplot(aes(x = p_hat)) +
 ```
 
 We can see that 95% of our data lies between `r lower_bound` and `r upper_bound`, making this a good 95% confidence interval for the proportion that favored legalizing marijuana in 2010. 
+
+## The `infer` package
+
+The `infer` package can make our randomization-based hypothesis tests and bootstrap confidence intervals a little simpler to run. Install and run the `infer` package before continuing:
+
+```{r inferload}
+# install.packages("infer")
+library(infer)
+```
+
+Let's look at the `gss10` data we found earlier. The support for legalizing marijuana was a bit under 48%. Using the `infer` package:
+
+```{r infer stat}
+p_hat <- gss10 %>%
+  specify(response = grass, success = "legal") %>%
+  calculate(stat = "prop")
+p_hat
+```
+
+Does this indicate that a minority of the 2010 American population supports legalizing marijuana? A *hypothesis test* compares this observation from the sample to a hypothetical distribution based on the null hypothesis. The `infer` package creates the hypothetical distribution using the following commands:
+
+```{r hypo}
+null_dist <- gss10 %>%
+  specify(response = grass, success = "legal") %>%
+  hypothesize(null = "point", p = .5) %>%
+  generate(reps = 10000, type = "draw") %>%
+  calculate(stat = "prop")
+```
+
+Now, we can find the number of simulated values more extreme than that of our test statistic:
+
+```{r infer pvalue}
+p_value <- null_dist %>%
+  get_p_value(obs_stat = p_hat, direction = "less")
+p_value
+```
+
+We get a p-value of `r p_value`, not quite small enough to reject the null hypothesis at an $\alpha = 0.05$ level. We can visualize this on a graph:
+
+```{r infer vis}
+null_dist %>% 
+  visualize() +
+  shade_p_value(obs_stat = p_hat, direction = "less") +
+  labs(
+    x = "Simulated proportion",
+    y = "Number of simulations"
+  )
+```
+
+For a bootstrap confidence interval, we can use the same "sample with replacement" technique as before. The `infer` package calls the "bootstrap" type when generating a distribution:
+
+```{r infer bootstrap}
+boot_dist <- gss10 %>%
+  specify(response = grass, success = "legal") %>%
+  generate(reps = 10000, type = "bootstrap") %>%
+  calculate(stat = "prop")
+
+
+# Use the bootstrap distribution to find a confidence interval:
+
+percentile_ci <- get_ci(boot_dist, level = 0.95)
+percentile_ci
+
+# Visualizing the observed statistic alongside the distribution:
+
+boot_dist %>% 
+  visualize() +
+  shade_confidence_interval(endpoints = percentile_ci) +
+  labs(
+    x = "Bootstrapped Proportion",
+    y = "Number of simulations"
+  )
+```
+
+
 
 ## Math 120 Monkey Investigation
 
