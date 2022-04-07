@@ -20,7 +20,11 @@ library(openintro)
 library(tidyverse)
 library(gghighlight)
 library(formatR)
-knitr::opts_chunk$set(echo = T, cache = T, eval = T, cache.lazy = F, warning = F)
+knitr::opts_chunk$set(echo = T, 
+                      cache = T, 
+                      eval = T, 
+                      cache.lazy = F, 
+                      warning = F)
 knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=F)
 options(scipen = 999)
 ```
@@ -209,7 +213,7 @@ Let's look at the `gss10` data we found earlier. The support for legalizing mari
 
 ```{r infer stat}
 p_hat <- gss10 %>%
-  specify(response = grass, success = "legal") %>%
+  specify(grass ~ NULL, success = "legal") %>%
   calculate(stat = "prop")
 p_hat
 ```
